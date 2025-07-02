@@ -153,3 +153,119 @@ rm -rf .terraform terraform.tfstate terraform.tfstate.backup
 ---
 
 Happy Deploying! 🛠️
+
+----------------------------------------------------------
+# 💣 NextShop Infra — Full Destroy Commands Guide
+
+This guide contains step-by-step instructions and commands to **safely and completely destroy all AWS infrastructure** provisioned for the NextShop project using Terraform, AWS CLI, and kubectl.
+
+---
+
+## ⚠️ Prerequisites
+
+- Terraform and AWS CLI installed
+- AWS profile (e.g., `nextshop`) properly configured
+- EKS cluster and resources created previously
+
+---
+
+## ✅ Step 1: Export AWS Profile
+
+```bash
+export AWS_PROFILE=nextshop
+export AWS_REGION=us-east-1
+```
+
+---
+
+## 🔍 Step 2: Check Running Resources
+
+### 🔹 EC2 Instances
+
+```bash
+aws ec2 describe-instances --query "Reservations[*].Instances[*].State.Name" --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+### 🔹 EKS Clusters
+
+```bash
+aws eks list-clusters --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+## 🧹 Step 3: Clean Up EKS Dependencies
+
+### 🔹 Delete EKS Node Groups (if any)
+
+```bash
+aws eks list-nodegroups --cluster-name nextshop --region $AWS_REGION --profile $AWS_PROFILE
+aws eks delete-nodegroup --cluster-name nextshop --nodegroup-name <nodegroup-name> --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+### 🔹 Delete EKS Cluster
+
+```bash
+aws eks delete-cluster --name nextshop --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+## 🚫 Step 4: Delete Load Balancers
+
+```bash
+aws elbv2 describe-load-balancers --region $AWS_REGION --profile $AWS_PROFILE
+
+# Delete each
+aws elbv2 delete-load-balancer --load-balancer-arn <lb-arn> --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+## 🔌 Step 5: Delete Elastic IPs
+
+```bash
+aws ec2 describe-addresses --region $AWS_REGION --profile $AWS_PROFILE
+aws ec2 release-address --allocation-id <eip-id> --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+## 🌐 Step 6: Delete Network Interfaces (ENIs)
+
+```bash
+aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=<vpc-id>" --region $AWS_REGION --profile $AWS_PROFILE
+aws ec2 delete-network-interface --network-interface-id <eni-id> --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+## 🗑️ Step 7: Terraform Destroy
+
+```bash
+cd nextshop-infra
+terraform destroy --auto-approve
+```
+
+---
+
+## 🧼 Step 8: Clean Local Terraform Files
+
+```bash
+rm -rf .terraform terraform.tfstate terraform.tfstate.backup
+```
+
+---
+
+## ✅ All Infra Cleaned!
+
+Make sure nothing is left:
+```bash
+aws ec2 describe-vpcs --region $AWS_REGION --profile $AWS_PROFILE
+aws eks list-clusters --region $AWS_REGION --profile $AWS_PROFILE
+aws ec2 describe-addresses --region $AWS_REGION --profile $AWS_PROFILE
+```
+
+---
+
+🔥 Done! All resources from NextShop Infra should now be destroyed and billing-safe.
